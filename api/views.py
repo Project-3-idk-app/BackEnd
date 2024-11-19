@@ -12,6 +12,8 @@ def getData(request):
 @api_view(['POST'])
 def createUser(request):
     serializer = UserSerializer(data=request.data)
+    print("here")
     if serializer.is_valid():
+        print("Worked")
         serializer.save()
     return Response(serializer.data)
