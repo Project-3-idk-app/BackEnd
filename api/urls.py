@@ -17,8 +17,8 @@ urlpatterns = [
     path('delete/friend/<int:id1>/<int:id2>/', views.deleteFriend),
 
     path('update/friend/<int:id1>/<int:id2>/<int:status>/', views.updateFriend),
+    path('update/user/<int:id>/', views.updateUserDetails),
 
     path('user/<int:id>/', views.getUserDetails),
-    path('user/<int:id>/update/', views.updateUserDetails),
     path('userexists/<int:id>/', views.userExists),
 ]
