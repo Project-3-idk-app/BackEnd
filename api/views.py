@@ -152,6 +152,7 @@ def createVote(request):
 @api_view(['POST'])
 def createFriend(request):
     serializer = FriendSerializer(data=request.data)
+    
     if serializer.is_valid():
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -175,3 +176,15 @@ def updateFriend(request, id1, id2, status):
         return Response({"message": "Friendship updated"}, status=status.HTTP_200_OK)
     except Friend.DoesNotExist:
         return Response({"error": "Friendship not found"}, status=status.HTTP_404_NOT_FOUND)
+    
+@api_view(['GET'])
+def getFriends(request, id):
+    friends = Friend.objects.filter(user_id1=id, status=1)
+    serializer = FriendSerializer(friends, many=True)
+    return Response(serializer.data)
+
+@api_view(['GET'])
+def searchUsers(request, query):
+    users = User.objects.filter(username__icontains=query)
+    serializer = UserSerializer(users, many=True)
+    return Response(serializer.data)
