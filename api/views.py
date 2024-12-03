@@ -127,3 +127,51 @@ def createOption(request):
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+def createVote(request):
+    serializer = VoteSerializer(data=request.data)
+    poll_id = request.data.get('poll')
+    user_id = request.data.get('user')
+    
+    try:
+        poll = Poll.objects.get(poll_id=poll_id)
+        if poll.user.id == user_id:
+            return Response({"error": "Poll creator cannot vote on their own poll"}, status=status.HTTP_400_BAD_REQUEST)
+    except Poll.DoesNotExist:
+        return Response({"error": "Poll not found"}, status=status.HTTP_404_NOT_FOUND)
+    
+    if Vote.objects.filter(poll_id=poll_id, user_id=user_id).exists():
+        return Response({"error": "User has already voted on this poll"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+def createFriend(request):
+    serializer = FriendSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['DELETE'])
+def deleteFriend(request, id1, id2):
+    try:
+        friend = Friend.objects.get(user_id1=id1, user_id2=id2)
+        friend.delete()
+        return Response({"message": "Friendship deleted"}, status=status.HTTP_200_OK)
+    except Friend.DoesNotExist:
+        return Response({"error": "Friendship not found"}, status=status.HTTP_404_NOT_FOUND)
+    
+@api_view(['PATCH'])
+def updateFriend(request, id1, id2, status):
+    try:
+        friend = Friend.objects.get(user_id1=id1, user_id2=id2)
+        friend.status = status
+        friend.save()
+        return Response({"message": "Friendship updated"}, status=status.HTTP_200_OK)
+    except Friend.DoesNotExist:
+        return Response({"error": "Friendship not found"}, status=status.HTTP_404_NOT_FOUND)
