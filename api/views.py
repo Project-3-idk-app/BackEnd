@@ -247,7 +247,7 @@ def searchUsers(request, query):
     return Response(serializer.data)
 
 @api_view(['GET'])
-def getActivePolls(request, id):
+def getActivePolls(request):
     expired_polls = Poll.objects.filter(is_active=True, created_on__lt=datetime.now() - timedelta(days=1))
     expired_polls.update(is_active=False)
     
