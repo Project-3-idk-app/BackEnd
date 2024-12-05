@@ -236,7 +236,7 @@ def unblock(request, id1, id2):
     
 @api_view(['GET'])
 def getFriends(request, id):
-    friends = Friend.objects.filter(user_id1=id, status=1)
+    friends = Friend.objects.filter(user_id1=id, status=2)
     serializer = FriendSerializer(friends, many=True)
     return Response(serializer.data)
 
@@ -248,7 +248,6 @@ def searchUsers(request, query):
 
 @api_view(['GET'])
 def getActivePolls(request, id):
-    # Update polls that are past 24 hours to be inactive
     expired_polls = Poll.objects.filter(is_active=True, created_on__lt=datetime.now() - timedelta(days=1))
     expired_polls.update(is_active=False)
     
