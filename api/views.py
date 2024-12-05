@@ -196,11 +196,11 @@ def searchUsers(request, query):
     return Response(serializer.data)
 
 @api_view(['GET'])
-def getPollsByPage(request, page):
+def getActivePolls(request):
     # Update polls that are past 24 hours to be inactive
     expired_polls = Poll.objects.filter(is_active=True, created_on__lt=datetime.now() - timedelta(days=1))
     expired_polls.update(is_active=False)
     
-    polls = Poll.objects.filter(is_active=True).order_by('-created_on')
+    polls = Poll.objects.filter(is_active=True)
     serializer = PollSerializer(polls, many=True)
-    return Response(serializer.data[page*10:page*10+10])
+    return Response(serializer.data)
