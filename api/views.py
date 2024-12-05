@@ -152,9 +152,10 @@ def createVote(request):
 @api_view(['POST'])
 def createFriend(request):
     serializer = FriendSerializer(data=request.data)
-    
-    if serializer.is_valid():
+    serializer1 = FriendSerializer(data={"user_id1": request.data.get("user_id2"), "user_id2": request.data.get("user_id1"), "status": request.data.get("status")}) 
+    if serializer.is_valid() and serializer1.is_valid():
         serializer.save()
+        serializer1.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -162,7 +163,9 @@ def createFriend(request):
 def deleteFriend(request, id1, id2):
     try:
         friend = Friend.objects.get(user_id1=id1, user_id2=id2)
+        friend1 = Friend.objects.get(user_id1=id2, user_id2=id1)
         friend.delete()
+        friend1.delete()
         return Response({"message": "Friendship deleted"}, status=status.HTTP_200_OK)
     except Friend.DoesNotExist:
         return Response({"error": "Friendship not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -171,8 +174,11 @@ def deleteFriend(request, id1, id2):
 def updateFriend(request, id1, id2, status):
     try:
         friend = Friend.objects.get(user_id1=id1, user_id2=id2)
+        friend1 = Friend.objects.get(user_id1=id2, user_id2=id1)
         friend.status = status
+        friend1.status = status
         friend.save()
+        friend1.save()
         return Response({"message": "Friendship updated"}, status=status.HTTP_200_OK)
     except Friend.DoesNotExist:
         return Response({"error": "Friendship not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -187,4 +193,14 @@ def getFriends(request, id):
 def searchUsers(request, query):
     users = User.objects.filter(username__icontains=query)
     serializer = UserSerializer(users, many=True)
+    return Response(serializer.data)
+
+@api_view(['GET'])
+def getActivePolls(request):
+    # Update polls that are past 24 hours to be inactive
+    expired_polls = Poll.objects.filter(is_active=True, created_on__lt=datetime.now() - timedelta(days=1))
+    expired_polls.update(is_active=False)
+    
+    polls = Poll.objects.filter(is_active=True)
+    serializer = PollSerializer(polls, many=True)
     return Response(serializer.data)

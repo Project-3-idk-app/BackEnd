@@ -16,12 +16,14 @@ urlpatterns = [
     path('delete/poll/<int:id>/', views.deletePoll),
     path('delete/friend/<int:id1>/<int:id2>/', views.deleteFriend),
 
-    path('update/friend/<int:id1>/<int:id2>/<int:status>/', views.updateFriend),
     path('update/user/<int:id>/', views.updateUserDetails),
+    path('update/friend/<int:id1>/<int:id2>/<int:status>/', views.updateFriend),
 
     path('user/<int:id>/', views.getUserDetails),
     path('userexists/<int:id>/', views.userExists),
     path('getfriends/<int:id>/', views.getFriends),
     path('searchusers/<str:query>/', views.searchUsers),
+
+    path('polls/', views.getActivePolls),
 
 ]
