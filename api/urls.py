@@ -22,6 +22,6 @@ urlpatterns = [
     path('user/<int:id>/', views.getUserDetails),
     path('userexists/<int:id>/', views.userExists),
     path('getfriends/<int:id>/', views.getFriends),
-    path('searchusers/<str:search>/', views.searchUsers),
+    path('searchusers/<str:query>/', views.searchUsers),
 
 ]
