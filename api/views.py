@@ -1,6 +1,6 @@
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import logout
 from django.contrib.auth.models import User
 from base.models import *
 from .serializers import *
@@ -150,38 +150,89 @@ def createVote(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
-def createFriend(request):
-    serializer = FriendSerializer(data=request.data)
-    serializer1 = FriendSerializer(data={"user_id1": request.data.get("user_id2"), "user_id2": request.data.get("user_id1"), "status": request.data.get("status")}) 
-    if serializer.is_valid() and serializer1.is_valid():
-        serializer.save()
-        serializer1.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-@api_view(['DELETE'])
-def deleteFriend(request, id1, id2):
+def friendRequest(request, id1, id2):
     try:
-        friend = Friend.objects.get(user_id1=id1, user_id2=id2)
-        friend1 = Friend.objects.get(user_id1=id2, user_id2=id1)
-        friend.delete()
-        friend1.delete()
-        return Response({"message": "Friendship deleted"}, status=status.HTTP_200_OK)
+        Friend.objects.get(user_id1=id2, user_id2=id1)
+        return Response({"error": "Friendship already exists"}, status=status.HTTP_400_BAD_REQUEST)
     except Friend.DoesNotExist:
-        return Response({"error": "Friendship not found"}, status=status.HTTP_404_NOT_FOUND)
-    
+        request = FriendSerializer(data={"user_id1": id2, "user_id2": id1, "status": 0})
+        pending = FriendSerializer(data={"user_id1": id1, "user_id2": id2, "status": 1})
+        if request.is_valid() and pending.is_valid():
+            request.save()
+            pending.save()
+            return Response(request.data, status=status.HTTP_201_CREATED)
+
 @api_view(['PATCH'])
-def updateFriend(request, id1, id2, status):
+def acceptFriendRequest(request, id1, id2):
     try:
         friend = Friend.objects.get(user_id1=id1, user_id2=id2)
         friend1 = Friend.objects.get(user_id1=id2, user_id2=id1)
-        friend.status = status
-        friend1.status = status
+        friend.status = 2
+        friend1.status = 2
         friend.save()
         friend1.save()
-        return Response({"message": "Friendship updated"}, status=status.HTTP_200_OK)
+        return Response({"message": "Friendship accepted"}, status=status.HTTP_200_OK)
     except Friend.DoesNotExist:
         return Response({"error": "Friendship not found"}, status=status.HTTP_404_NOT_FOUND)
+
+def delete_friendship(id1, id2):
+    """
+    Helper function to delete a friendship between two users.
+    Returns a tuple: (success, message or error)
+    """
+    try:
+        Friend.objects.filter(user_id1=id1, user_id2=id2).delete()
+        Friend.objects.filter(user_id1=id2, user_id2=id1).delete()
+        return True, "Friendship successfully deleted"
+    except Exception as e:
+        return False, f"An error occurred: {str(e)}"
+
+@api_view(['DELETE'])
+def rejectFriendRequest(request, id1, id2):
+    success, message = delete_friendship(id1, id2)
+    if success:
+        return Response({"message": "Friendship request rejected"}, status=status.HTTP_200_OK)
+    return Response({"error": message}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['DELETE'])
+def undoFriendRequest(request, id1, id2):
+    success, message = delete_friendship(id1, id2)
+    if success:
+        return Response({"message": "Friendship request undone"}, status=status.HTTP_200_OK)
+    return Response({"error": message}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['DELETE'])
+def unfriend(request, id1, id2):
+    success, message = delete_friendship(id1, id2)
+    if success:
+        return Response({"message": "Friendship removed"}, status=status.HTTP_200_OK)
+    return Response({"error": message}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['PATCH'])
+def block(request, id1, id2):
+    try:
+        friend = Friend.objects.get(user_id1=id1, user_id2=id2)
+        friend1 = Friend.objects.get(user_id1=id2, user_id2=id1)
+        friend.status = 3
+        friend.save()
+        friend1.delete()
+        return Response({"message": "Person blocked"}, status=status.HTTP_200_OK)
+    except Friend.DoesNotExist:
+        try:
+            friend = Friend(user_id1=id1, user_id2=id2, status=3)
+            friend.save()
+            return Response({"message": "Person blocked"}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response(
+                {"error": "Failed to create friendship records", "details": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            
+@api_view(['DELETE'])
+def unblock(request, id1, id2):
+    friend = Friend.objects.filter(user_id1=id1, user_id2=id2, status=3)
+    friend.delete()
+    return Response({"message": "Person unblocked"}, status=status.HTTP_200_OK)
     
 @api_view(['GET'])
 def getFriends(request, id):
@@ -196,7 +247,7 @@ def searchUsers(request, query):
     return Response(serializer.data)
 
 @api_view(['GET'])
-def getActivePolls(request):
+def getActivePolls(request, id):
     # Update polls that are past 24 hours to be inactive
     expired_polls = Poll.objects.filter(is_active=True, created_on__lt=datetime.now() - timedelta(days=1))
     expired_polls.update(is_active=False)
