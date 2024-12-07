@@ -254,3 +254,33 @@ def getActivePolls(request):
     polls = Poll.objects.filter(is_active=True)
     serializer = PollSerializer(polls, many=True)
     return Response(serializer.data)
+
+@api_view(['GET'])
+def getPollByUser(request, id):
+    try:
+        user = User.objects.get(id=id)
+        polls = Poll.objects.filter(user=user)
+        poll_data = []
+
+        for poll in polls:
+            options = Option.objects.filter(poll=poll)
+            option_data = []
+            for option in options:
+                votes = Vote.objects.filter(option=option).count()
+                option_data.append({
+                    "option": option.option_text,
+                    "votes": votes
+                })
+            poll_data.append({
+                "pollId": poll.poll_id,
+                "pollTitle": poll.title,
+                "options": option_data
+            })
+
+        data = {
+            "userId": user.id,
+            "polls": poll_data
+        }
+        return Response(data, status=status.HTTP_200_OK)
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
