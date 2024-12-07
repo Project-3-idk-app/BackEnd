@@ -31,6 +31,7 @@ urlpatterns = [
     path('unblock/<int:id1>/<int:id2>/', views.unblock),
 
     path('polls/', views.getActivePolls),
+    path('polls/<int:id>/', views.getActivePollsByUser),
     path('userpolls/<int:id>/', views.getPollByUser),
 
 ]

@@ -147,7 +147,9 @@ def createVote(request):
     if serializer.is_valid():
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    else:   
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)  
+    # return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
 def friendRequest(request, id1, id2):
@@ -256,11 +258,24 @@ def getActivePolls(request):
     return Response(serializer.data)
 
 @api_view(['GET'])
+def getActivePollsByUser(request, id):
+    expired_polls = Poll.objects.filter(is_active=True, created_on__lt=datetime.now() - timedelta(days=1))
+    expired_polls.update(is_active=False)
+    
+    polls = Poll.objects.filter(is_active=True).exclude(vote__user_id=id).exclude(user_id=id)
+    serializer = PollSerializer(polls, many=True)
+    return Response(serializer.data)
+
+@api_view(['GET'])
 def getPollByUser(request, id):
+    expired_polls = Poll.objects.filter(is_active=True, created_on__lt=datetime.now() - timedelta(days=1))
+    expired_polls.update(is_active=False)
+
     try:
         user = User.objects.get(id=id)
         polls = Poll.objects.filter(user=user)
-        poll_data = []
+        poll_data_active = []
+        poll_data_inactive = []
 
         for poll in polls:
             options = Option.objects.filter(poll=poll)
@@ -271,15 +286,25 @@ def getPollByUser(request, id):
                     "option": option.option_text,
                     "votes": votes
                 })
-            poll_data.append({
-                "pollId": poll.poll_id,
-                "pollTitle": poll.title,
-                "options": option_data
-            })
+            if poll.is_active:
+                poll_data_active.append({
+                    "pollId": poll.poll_id,
+                    "pollTitle": poll.title,
+                    "pollVotes" : Vote.objects.filter(poll=poll).count(),
+                    "options": option_data
+                })
+            else:
+                poll_data_inactive.append({
+                    "pollId": poll.poll_id,
+                    "pollTitle": poll.title,
+                    "pollVotes" : Vote.objects.filter(poll=poll).count(),
+                    "options": option_data
+                })
 
         data = {
             "userId": user.id,
-            "polls": poll_data
+            "polls_active": poll_data_active,
+            "polls_inactive": poll_data_inactive
         }
         return Response(data, status=status.HTTP_200_OK)
     except User.DoesNotExist:
