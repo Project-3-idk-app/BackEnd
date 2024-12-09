@@ -20,6 +20,7 @@ urlpatterns = [
     path('user/<int:id>/', views.getUserDetails),
     path('userexists/<int:id>/', views.userExists),
     path('getfriends/<int:id>/', views.getFriends),
+    path('getnotifications/<int:id>/', views.getNotifications),
     path('searchusers/<str:query>/', views.searchUsers),
 
     path('friendrequest/<int:id1>/<int:id2>/', views.friendRequest),

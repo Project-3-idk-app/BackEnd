@@ -243,6 +243,12 @@ def getFriends(request, id):
     return Response(serializer.data)
 
 @api_view(['GET'])
+def getNotifications(request, id):
+    friends = Friend.objects.filter(user_id2=id, status__in=[0, 1])
+    serializer = FriendSerializer(friends, many=True)
+    return Response(serializer.data)
+
+@api_view(['GET'])
 def searchUsers(request, query):
     users = User.objects.filter(username__icontains=query)
     serializer = UserSerializer(users, many=True)
@@ -261,10 +267,43 @@ def getActivePolls(request):
 def getActivePollsByUser(request, id):
     expired_polls = Poll.objects.filter(is_active=True, created_on__lt=datetime.now() - timedelta(days=1))
     expired_polls.update(is_active=False)
-    
-    polls = Poll.objects.filter(is_active=True).exclude(vote__user_id=id).exclude(user_id=id)
-    serializer = PollSerializer(polls, many=True)
-    return Response(serializer.data)
+
+    try:
+        user = User.objects.get(id=id)
+        polls = Poll.objects.filter(is_active=True).exclude(vote__user_id=id).exclude(user_id=id)
+        poll_data = []
+
+        for poll in polls:
+            options = Option.objects.filter(poll=poll)
+            option_data = []
+            for option in options:
+                votes = Vote.objects.filter(option=option).count()
+                option_data.append({
+                    "option_id": option.option_id,
+                    "poll": option.poll.poll_id,
+                    "user": option.user.id,
+                    "option_text": option.option_text,
+                    "votes": votes
+                })
+            poll_data.append({
+                "poll_id": poll.poll_id,
+                "user": poll.user.id,
+                "title": poll.title,
+                "is_active": poll.is_active,
+                "is_public": poll.is_public,
+                "created_on": poll.created_on,
+                "expires_on": poll.expires_on,
+                "pollVotes" : Vote.objects.filter(poll=poll).count(),
+                "options": option_data
+            })
+
+        data = {
+            "userId": user.id,
+            "polls": poll_data
+        }
+        return Response(data, status=status.HTTP_200_OK)
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['GET'])
 def getPollByUser(request, id):
