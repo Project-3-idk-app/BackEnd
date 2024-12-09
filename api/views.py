@@ -153,12 +153,15 @@ def createVote(request):
 
 @api_view(['POST'])
 def friendRequest(request, id1, id2):
+    # id1 is the user sending the request
     try:
         Friend.objects.get(user_id1=id2, user_id2=id1)
         return Response({"error": "Friendship already exists"}, status=status.HTTP_400_BAD_REQUEST)
     except Friend.DoesNotExist:
         request = FriendSerializer(data={"user_id1": id2, "user_id2": id1, "status": 0})
+        # id2, id1 is the user receiving the request
         pending = FriendSerializer(data={"user_id1": id1, "user_id2": id2, "status": 1})
+        # id1, id2 is the user sending the request
         if request.is_valid() and pending.is_valid():
             request.save()
             pending.save()
@@ -244,7 +247,7 @@ def getFriends(request, id):
 
 @api_view(['GET'])
 def getNotifications(request, id):
-    friends = Friend.objects.filter(user_id2=id, status__in=[0, 1])
+    friends = Friend.objects.filter(user_id1=id, status__in=[0, 1])
     serializer = FriendSerializer(friends, many=True)
     return Response(serializer.data)
 
