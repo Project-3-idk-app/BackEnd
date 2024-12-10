@@ -257,10 +257,13 @@ def searchUsers(request, query):
     serializer = UserSerializer(users, many=True)
     return Response(serializer.data)
 
+def checkExpiredPolls():
+    expired_polls = Poll.objects.filter(is_active=True, created_on__lt=datetime.now() - timedelta(days=3))
+    expired_polls.update(is_active=False)
+
 @api_view(['GET'])
 def getActivePolls(request):
-    expired_polls = Poll.objects.filter(is_active=True, created_on__lt=datetime.now() - timedelta(days=1))
-    expired_polls.update(is_active=False)
+    checkExpiredPolls()
     
     polls = Poll.objects.filter(is_active=True)
     serializer = PollSerializer(polls, many=True)
@@ -268,8 +271,7 @@ def getActivePolls(request):
 
 @api_view(['GET'])
 def getActivePollsByUser(request, id):
-    expired_polls = Poll.objects.filter(is_active=True, created_on__lt=datetime.now() - timedelta(days=1))
-    expired_polls.update(is_active=False)
+    checkExpiredPolls()
 
     try:
         user = User.objects.get(id=id)
@@ -310,8 +312,7 @@ def getActivePollsByUser(request, id):
 
 @api_view(['GET'])
 def getPollByUser(request, id):
-    expired_polls = Poll.objects.filter(is_active=True, created_on__lt=datetime.now() - timedelta(days=1))
-    expired_polls.update(is_active=False)
+    checkExpiredPolls()
 
     try:
         user = User.objects.get(id=id)
